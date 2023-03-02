@@ -1,12 +1,13 @@
-import {config} from 'dotenv'
+import { config } from 'dotenv'
 import axios from 'axios'
-import period from './enums/period'
+import Period from './enums/Period'
 import Candle from './models/Candle'
+import { createMessageChannel } from './messages/messageChanel'
 
 config()
 
-const readMarketPrice = async (): Promise<number> =>{
-    const result = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=ud')
+const readMarketPrice = async (): Promise<number> => {
+    const result = await axios.get(process.env.PRICES_API)
     const data = result.data
     const price = data.bitcoin.usd
     return price
@@ -14,26 +15,32 @@ const readMarketPrice = async (): Promise<number> =>{
 
 const generateCandles = async () => {
 
-    while(true){
-        const loopTimes = period.FIVE_MINUTES / period.TEN_SECONDS
-        const candles = new Candle('BTC')
+    const messageChannel = await createMessageChannel()
 
-        console.log('---------------------------------------')
-        console.log('Generating new candle')
+    if (messageChannel) {
+        while (true) {
+            const loopTimes = Period.FIVE_MINUTES / Period.TEN_SECONDS
+            const candle = new Candle('BTC')
 
+            console.log('---------------------------------------')
+            console.log('Generating new candle')
 
-        for (let i = 0; i < loopTimes; i++){
-            const price = await readMarketPrice()
-            Candle.addValue(price)
-            console.log(`Market price #${i + 1} of ${loopTimes}`)
-            await new Promise(r => setTimeout(r, period.TEN_SECONDS))
+            for (let i = 0; i < loopTimes; i++) {
+                const price = await readMarketPrice()
+                candle.addValue(price)
+                console.log(`Market price #${i + 1} of ${loopTimes}`)
+                await new Promise(r => setTimeout(r, Period.TEN_SECONDS))
+            }
+
+            candle.closeCandle()
+            console.log('Candle close')
+            const candleObj = candle.toSimpleObject()
+            console.log(candleObj)
+            const candleJson = JSON.stringify(candleObj)
+            messageChannel.sendToQueue(process.env.QUEUE_NAME, Buffer.from(candleJson))
+            console.log('Candle sent to queue')
         }
-
-        Candle.closeCandle
-        console.log('Candle close')
-        console.log(Candle.toSimpleObject())
     }
-    
 }
 
 generateCandles()

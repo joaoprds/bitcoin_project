@@ -21,7 +21,7 @@ export default class Candle {
         this.color = candleColor.UNDETERMINED
     }
 
-    public addValue(value: number) {
+ addValue(value: number) {
         this.values.push(value)
 
         if (this.values.length == 1) {
@@ -37,7 +37,7 @@ export default class Candle {
         }
     }
 
-    public closeCandle() {
+ closeCandle() {
         if (this.values.length > 0) {
             this.close = this.values[this.values.length - 1]
             this.finalDateTime = new Date()
@@ -50,7 +50,7 @@ export default class Candle {
         }
     }
 
-    public toSimpleObject() {
+ toSimpleObject() {
         const { values, ...obj } = this
         return obj
     }
